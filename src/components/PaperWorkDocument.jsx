@@ -1,5 +1,6 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import usimLogo from '../assets/usim-logo.png';
 
 const styles = StyleSheet.create({
   coverPage: {
@@ -10,6 +11,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     textAlign: 'center',
+  },
+  logo: {
+    width: 150,
+    height: 71,
+    marginBottom: 30,
   },
   bodyPage: {
     fontFamily: 'Helvetica',
@@ -120,6 +126,7 @@ const PaperWorkDocument = ({ data }) => {
     <Document>
       {/* Cover Page */}
       <Page size="A4" style={styles.coverPage}>
+        <Image style={styles.logo} src={usimLogo} />
         <Text style={styles.coverTitle}>KERTAS KERJA CADANGAN</Text>
         <Text style={[styles.coverTitle, { marginTop: 20, marginBottom: 50 }]}>{data.eventMeta.programName}</Text>
         
