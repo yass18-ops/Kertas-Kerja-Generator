@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import PaperWorkDocument from './components/PaperWorkDocument';
@@ -6,13 +6,13 @@ import { sanitizeName } from './utils/sanitize';
 import { Plus, Trash2, FileDown } from 'lucide-react';
 
 const defaultValues = {
-  eventMeta: { programName: '', startDate: '', endDate: '', venue: '', organizer: '', collaborator: '' },
+  eventMeta: { programName: '', startDate: '', endDate: '', venue: '', organizer: '', collaborator: '', pax: '' },
   proposalDetails: { purpose: '', synopsis: '', background: [''] },
   objectives: [{ giinaElement: '', description: '' }],
   committee: {
     patron: { name: '', role: 'Naib Canselor' },
-    advisor: { name: '', role: 'Dekan' },
-    coordinator: { name: '', role: 'Penasihat Kelab' },
+    advisor: { name: '', role: 'Dekan', pejabat: '' },
+    coordinator: { name: '', role: 'Penasihat Kelab', pejabat: '' },
     director: { name: '', matric: '' },
     secretary: { name: '', matric: '' },
     subCommittees: [{ roleName: 'AJK Publisiti', members: [{ name: '', matric: '' }] }]
@@ -55,6 +55,9 @@ function App() {
   });
 
   const [formData, setFormData] = useState(null);
+
+  const incomeList = watch("financials.income") || [];
+  const incomeSources = incomeList.map(inc => inc.source).filter(Boolean);
 
   const { fields: bgFields, append: appendBg, remove: removeBg } = useFieldArray({ control, name: "proposalDetails.background" });
   const { fields: objFields, append: appendObj, remove: removeObj } = useFieldArray({ control, name: "objectives" });
@@ -114,6 +117,10 @@ function App() {
               <div>
                 <label className={labelClass}>Kerjasama (Pilihan)</label>
                 <input type="text" {...register("eventMeta.collaborator")} className={inputClass} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Bilangan & Kumpulan Peserta (Contoh: 26 orang ahli Majlis Perwakilan Pelajar)</label>
+                <input type="text" {...register("eventMeta.pax", { required: true })} className={inputClass} placeholder="Contoh: 26 orang ahli Majlis Perwakilan Pelajar" />
               </div>
             </div>
           </div>
@@ -193,10 +200,18 @@ function App() {
                         <input type="text" {...register(`committee.${role}.matric`, { required: true })} className={inputClass} />
                       </div>
                     ) : (
-                      <div>
-                        <label className="text-xs text-gray-500">Jawatan/Peranan</label>
-                        <input type="text" {...register(`committee.${role}.role`, { required: true })} className={inputClass} />
-                      </div>
+                      <>
+                        <div>
+                          <label className="text-xs text-gray-500">Jawatan/Peranan</label>
+                          <input type="text" {...register(`committee.${role}.role`, { required: true })} className={inputClass} />
+                        </div>
+                        {(role === 'advisor' || role === 'coordinator') && (
+                          <div>
+                            <label className="text-xs text-gray-500">Pejabat/Jabatan</label>
+                            <input type="text" {...register(`committee.${role}.pejabat`, { required: true })} className={inputClass} placeholder="cth: Pusat Hal Ehwal Pelajar" />
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -305,7 +320,7 @@ function App() {
                   const errorMsg = errors?.financials?.expenses?.[index]?.amount?.message;
                   return (
                     <div key={field.id} className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-start">
                         <div>
                           <label className="text-xs text-gray-500">Kategori</label>
                           <select {...register(`financials.expenses.${index}.category`, { required: true })} className={inputClass}>
@@ -324,6 +339,16 @@ function App() {
                         <div>
                           <label className="text-xs text-gray-500">Pengiraan (Masukkan pax)</label>
                           <input type="text" {...register(`financials.expenses.${index}.calculation`, { required: true })} className={inputClass} placeholder="cth: 100 pax x RM 4" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500">Sumber Peruntukan</label>
+                          <select {...register(`financials.expenses.${index}.fundSource`, { required: true })} className={inputClass}>
+                            <option value="">-- Pilih Sumber --</option>
+                            {incomeSources.map((src, sIdx) => (
+                              <option key={sIdx} value={src}>{src}</option>
+                            ))}
+                            {incomeSources.length === 0 && <option value="Peruntukan Mengurus">Peruntukan Mengurus</option>}
+                          </select>
                         </div>
                         <div className="flex gap-2">
                           <div className="flex-1">
@@ -396,11 +421,12 @@ function App() {
             
             {formData && (
               <PDFDownloadLink
+                key={JSON.stringify(formData)}
                 document={<PaperWorkDocument data={formData} />}
                 fileName={`Kertas_Kerja_${formData.eventMeta.programName.replace(/\s+/g, '_') || 'Program'}.pdf`}
                 className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
-                {({ blob, url, loading, error }) =>
+                {({ loading }) =>
                   loading ? 'Menjana PDF...' : <><FileDown className="mr-2" /> Muat Turun PDF</>
                 }
               </PDFDownloadLink>
