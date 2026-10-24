@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 1.15,
     paddingHorizontal: 72, // 1 inch margins
-    paddingVertical: 72,
+    paddingVertical: 54, // Prevents awkward page breaks while preserving standard margins
     textAlign: 'justify',
     color: '#000000',
   },
@@ -203,15 +203,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.5,
     borderColor: '#000000',
     marginTop: 4, // Tightly placed horizontal rule
-    marginBottom: 20,
+    marginBottom: 12,
     width: '100%',
   },
   sectionHeader: {
     fontFamily: 'Arial',
     fontWeight: 'bold',
     fontSize: 11,
-    marginTop: 18,
-    marginBottom: 10,
+    marginTop: 12,
+    marginBottom: 6,
     textTransform: 'uppercase',
     color: '#000000',
   },
@@ -219,19 +219,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Arial',
     fontWeight: 'bold',
     fontSize: 11,
-    marginTop: 14,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 4,
     color: '#000000',
   },
   paragraph: {
-    marginBottom: 10,
+    marginBottom: 8,
     lineHeight: 1.15,
     color: '#000000',
   },
   // Outline Level 1 Body (indented under Section Headers)
   indent1Body: {
     paddingLeft: 30,
-    marginBottom: 10,
+    marginBottom: 6,
     textAlign: 'justify',
     lineHeight: 1.15,
     color: '#000000',
@@ -245,10 +245,10 @@ const styles = StyleSheet.create({
   },
   rowContainer: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 5,
   },
   bulletCell: {
-    width: 30, // Fit '2.1' or '3.1.1' perfectly
+    width: 32, // Fit '2.1' or '3.1.1' or '3.2.1' comfortably without wrapping numerals
     fontFamily: 'Arial',
     fontWeight: 'bold',
     color: '#000000',
@@ -316,15 +316,15 @@ const styles = StyleSheet.create({
   },
   // Vertically stacked signature blocks (one after another)
   signatureContainer: {
-    marginTop: 35,
+    marginTop: 20,
     flexDirection: 'column',
   },
   signatureBlock: {
     width: '100%',
-    marginBottom: 35,
+    marginBottom: 18,
   },
   signatureLine: {
-    marginTop: 80, // Increased spacing for handwritten signatures
+    marginTop: 45, // Clean spacing for handwritten signatures that avoids page overflows
     borderTopWidth: 1,
     borderColor: '#000000',
     marginBottom: 4,
@@ -405,18 +405,20 @@ const PaperWorkDocument = ({ data }) => {
         <Text style={styles.title}>{data.eventMeta.programName}</Text>
         <View style={styles.horizontalRule} />
 
-        <Text style={styles.sectionHeader}>1. TUJUAN</Text>
-        <Text style={styles.indent1Body}>
-          Kertas cadangan ini dikemukakan kepada Jawatankuasa Pengurusan Aktiviti MPP untuk perakuan dan kelulusan bagi menganjurkan {data.eventMeta.programName}.
-        </Text>
+        <View wrap={false}>
+          <Text style={styles.sectionHeader}>1. TUJUAN</Text>
+          <Text style={styles.indent1Body}>
+            Kertas cadangan ini dikemukakan kepada Jawatankuasa Pengurusan Aktiviti MPP untuk perakuan dan kelulusan bagi menganjurkan {data.eventMeta.programName}.
+          </Text>
+        </View>
 
         <Text style={styles.sectionHeader}>2. LATAR BELAKANG</Text>
-        <View style={[styles.rowContainer, styles.indent1]}>
+        <View wrap={false} style={[styles.rowContainer, styles.indent1]}>
           <Text style={styles.bulletCell}>2.1</Text>
           <Text style={styles.contentCell}>{data.proposalDetails.synopsis}</Text>
         </View>
         {data.proposalDetails.background.map((bg, idx) => (
-          <View key={idx} style={[styles.rowContainer, styles.indent1]}>
+          <View key={idx} wrap={false} style={[styles.rowContainer, styles.indent1]}>
             <Text style={styles.bulletCell}>2.{idx + 2}</Text>
             <Text style={styles.contentCell}>{bg}</Text>
           </View>
@@ -425,71 +427,89 @@ const PaperWorkDocument = ({ data }) => {
         <Text style={styles.sectionHeader}>3. ULASAN PENTADBIRAN</Text>
 
         {/* 3.1 Objectives */}
-        <Text style={[styles.subSectionHeader, styles.indent1]}>3.1 Objektif</Text>
-        {data.objectives.map((obj, idx) => (
-          <View key={idx} style={[styles.rowContainer, styles.indent2]}>
-            <Text style={styles.bulletCell}>3.1.{idx + 1}</Text>
-            <Text style={styles.contentCell}>{obj.description} ({obj.giinaElement})</Text>
+        <View wrap={false}>
+          <Text style={[styles.subSectionHeader, styles.indent1]}>3.1 Objektif</Text>
+          {data.objectives.length > 0 && (
+            <View style={[styles.rowContainer, styles.indent2]}>
+              <Text style={styles.bulletCell}>3.1.1</Text>
+              <Text style={styles.contentCell}>{data.objectives[0].description || ''}</Text>
+            </View>
+          )}
+        </View>
+        {data.objectives.slice(1).map((obj, idx) => (
+          <View key={idx + 1} wrap={false} style={[styles.rowContainer, styles.indent2]}>
+            <Text style={styles.bulletCell}>3.1.{idx + 2}</Text>
+            <Text style={styles.contentCell}>{obj.description || ''}</Text>
           </View>
         ))}
 
-        {/* 3.2 Program Details */}
-        <Text style={[styles.subSectionHeader, styles.indent1]}>3.2 Butiran Program</Text>
-        <View style={[styles.rowContainer, styles.indent2]}>
-          <Text style={styles.bulletCell}>3.2.1</Text>
-          <View style={{ flex: 1 }}>
-            <View style={styles.colonRow}>
-              <Text style={styles.colonLabel}>Tarikh</Text>
-              <Text style={styles.colonSeparator}>:</Text>
-              <Text style={styles.colonValue}>{formatDateRange(data.eventMeta.startDate, data.eventMeta.endDate)}</Text>
-            </View>
-            <View style={styles.colonRow}>
-              <Text style={styles.colonLabel}>Tempat</Text>
-              <Text style={styles.colonSeparator}>:</Text>
-              <Text style={styles.colonValue}>{data.eventMeta.venue}</Text>
-            </View>
-            <View style={styles.colonRow}>
-              <Text style={styles.colonLabel}>Masa</Text>
-              <Text style={styles.colonSeparator}>:</Text>
-              <Text style={styles.colonValue}>{data.itinerary.timeRange || 'Rujuk Lampiran B'}</Text>
-            </View>
-            <View style={styles.colonRow}>
-              <Text style={styles.colonLabel}>Peserta</Text>
-              <Text style={styles.colonSeparator}>:</Text>
-              <Text style={styles.colonValue}>{data.eventMeta.pax}</Text>
+        {/* 3.2 Program Details - wrap={false} prevents 3.2 being separated from 3.2.1 */}
+        <View wrap={false}>
+          <Text style={[styles.subSectionHeader, styles.indent1]}>3.2 Butiran Program</Text>
+          <View style={[styles.rowContainer, styles.indent2]}>
+            <Text style={styles.bulletCell}>3.2.1</Text>
+            <View style={{ flex: 1 }}>
+              <View style={styles.colonRow}>
+                <Text style={styles.colonLabel}>Tarikh</Text>
+                <Text style={styles.colonSeparator}>:</Text>
+                <Text style={styles.colonValue}>{formatDateRange(data.eventMeta.startDate, data.eventMeta.endDate)}</Text>
+              </View>
+              <View style={styles.colonRow}>
+                <Text style={styles.colonLabel}>Tempat</Text>
+                <Text style={styles.colonSeparator}>:</Text>
+                <Text style={styles.colonValue}>{data.eventMeta.venue}</Text>
+              </View>
+              <View style={styles.colonRow}>
+                <Text style={styles.colonLabel}>Masa</Text>
+                <Text style={styles.colonSeparator}>:</Text>
+                <Text style={styles.colonValue}>{data.itinerary.timeRange || 'Rujuk Lampiran B'}</Text>
+              </View>
+              <View style={styles.colonRow}>
+                <Text style={styles.colonLabel}>Peserta</Text>
+                <Text style={styles.colonSeparator}>:</Text>
+                <Text style={styles.colonValue}>{data.eventMeta.pax}</Text>
+              </View>
             </View>
           </View>
         </View>
 
         {/* 3.3 Committees */}
-        <Text style={[styles.subSectionHeader, styles.indent1]}>3.3 Jawatankuasa Pelaksana</Text>
-        <View style={[styles.rowContainer, styles.indent2]}>
-          <Text style={styles.bulletCell}>3.3.1</Text>
-          <Text style={styles.contentCell}>Sila rujuk Lampiran A.</Text>
+        <View wrap={false}>
+          <Text style={[styles.subSectionHeader, styles.indent1]}>3.3 Jawatankuasa Pelaksana</Text>
+          <View style={[styles.rowContainer, styles.indent2]}>
+            <Text style={styles.bulletCell}>3.3.1</Text>
+            <Text style={styles.contentCell}>Sila rujuk Lampiran A.</Text>
+          </View>
         </View>
 
         {/* 3.4 Itinerary */}
-        <Text style={[styles.subSectionHeader, styles.indent1]}>3.4 Atur Cara</Text>
-        <View style={[styles.rowContainer, styles.indent2]}>
-          <Text style={styles.bulletCell}>3.4.1</Text>
-          <Text style={styles.contentCell}>Sila rujuk Lampiran B.</Text>
+        <View wrap={false}>
+          <Text style={[styles.subSectionHeader, styles.indent1]}>3.4 Atur Cara</Text>
+          <View style={[styles.rowContainer, styles.indent2]}>
+            <Text style={styles.bulletCell}>3.4.1</Text>
+            <Text style={styles.contentCell}>Sila rujuk Lampiran B.</Text>
+          </View>
         </View>
 
         {/* 3.5 Financials */}
-        <Text style={[styles.subSectionHeader, styles.indent1]}>3.5 Implikasi Kewangan</Text>
-        <View style={[styles.rowContainer, styles.indent2]}>
-          <Text style={styles.bulletCell}>3.5.1</Text>
-          <Text style={styles.contentCell}>Sila rujuk Lampiran C.</Text>
+        <View wrap={false}>
+          <Text style={[styles.subSectionHeader, styles.indent1]}>3.5 Implikasi Kewangan</Text>
+          <View style={[styles.rowContainer, styles.indent2]}>
+            <Text style={styles.bulletCell}>3.5.1</Text>
+            <Text style={styles.contentCell}>Sila rujuk Lampiran C.</Text>
+          </View>
         </View>
 
-        <Text style={styles.sectionHeader}>4. PERAKUAN</Text>
-        <Text style={styles.indent1Body}>
-          Jawatankuasa Pengurusan Aktiviti MPP dengan hormatnya diminta meneliti kertas kerja ini dan jika dipersetujui meluluskan cadangan menganjurkan {data.eventMeta.programName} sebagaimana yang dikemukakan.
-        </Text>
+        <View wrap={false}>
+          <Text style={styles.sectionHeader}>4. PERAKUAN</Text>
+          <Text style={styles.indent1Body}>
+            Jawatankuasa Pengurusan Aktiviti MPP dengan hormatnya diminta meneliti kertas kerja ini dan jika dipersetujui meluluskan cadangan menganjurkan {data.eventMeta.programName} sebagaimana yang dikemukakan.
+          </Text>
+        </View>
 
-        {/* Signatures - stacked vertically one after another */}
-        <View style={styles.signatureContainer}>
-          <View style={styles.signatureBlock}>
+        {/* Signatures - wrap={false} prevents signature block from splitting across pages */}
+        <View wrap={false} style={styles.signatureContainer}>
+          <View wrap={false} style={styles.signatureBlock}>
             <Text style={styles.bold}>Disediakan oleh,</Text>
             <View style={styles.signatureLine} />
             <Text style={styles.bold}>({sanitizeName(data.signatures.preparedBy.name).toUpperCase()})</Text>
@@ -497,7 +517,7 @@ const PaperWorkDocument = ({ data }) => {
             <Text>{data.eventMeta.programName}</Text>
             <Text>Tarikh:</Text>
           </View>
-          <View style={styles.signatureBlock}>
+          <View wrap={false} style={styles.signatureBlock}>
             <Text style={styles.bold}>Disemak oleh,</Text>
             <View style={styles.signatureLine} />
             <Text style={styles.bold}>({sanitizeName(data.signatures.reviewedBy.name).toUpperCase()})</Text>
@@ -587,12 +607,12 @@ const PaperWorkDocument = ({ data }) => {
         </View>
 
         <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { width: '30%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>MASA</Text>
-            <Text style={[styles.tableCellLast, { width: '70%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>AKTIVITI</Text>
+          <View wrap={false} style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.tableCell, styles.bold, { width: '30%', textAlign: 'center' }]}>MASA</Text>
+            <Text style={[styles.tableCellLast, styles.bold, { width: '70%', textAlign: 'center' }]}>AKTIVITI</Text>
           </View>
           {data.itinerary.activities.map((act, idx) => (
-            <View key={idx} style={idx === data.itinerary.activities.length - 1 ? styles.tableRowLast : styles.tableRow}>
+            <View key={idx} wrap={false} style={idx === data.itinerary.activities.length - 1 ? styles.tableRowLast : styles.tableRow}>
               <Text style={[styles.tableCell, { width: '30%', textAlign: 'center' }]}>{formatItineraryTime(act.time)}</Text>
               <Text style={[styles.tableCellLast, { width: '70%', paddingLeft: 10 }]}>{act.activity}</Text>
             </View>
@@ -609,35 +629,35 @@ const PaperWorkDocument = ({ data }) => {
 
         <Text style={styles.bold}>1. Sumber Pendapatan</Text>
         <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { width: '10%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>BIL.</Text>
-            <Text style={[styles.tableCell, { width: '60%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>SUMBER</Text>
-            <Text style={[styles.tableCellLast, { width: '30%', textAlign: 'center', fontFamily: 'Helvetica-Bold' }]}>JUMLAH (RM)</Text>
+          <View wrap={false} style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.tableCell, styles.bold, { width: '10%', textAlign: 'center' }]}>BIL.</Text>
+            <Text style={[styles.tableCell, styles.bold, { width: '60%', textAlign: 'center' }]}>SUMBER</Text>
+            <Text style={[styles.tableCellLast, styles.bold, { width: '30%', textAlign: 'center' }]}>JUMLAH (RM)</Text>
           </View>
           {data.financials.income.map((inc, idx) => (
-            <View key={idx} style={styles.tableRow}>
+            <View key={idx} wrap={false} style={styles.tableRow}>
               <Text style={[styles.tableCell, { width: '10%', textAlign: 'center' }]}>{idx + 1}</Text>
               <Text style={[styles.tableCell, { width: '60%' }]}>{inc.source}</Text>
               <Text style={[styles.tableCellLast, { width: '30%', textAlign: 'right' }]}>{parseFloat(inc.amount).toFixed(2)}</Text>
             </View>
           ))}
-          <View style={[styles.tableRowLast, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { width: '70%', textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>JUMLAH KESELURUHAN</Text>
-            <Text style={[styles.tableCellLast, { width: '30%', textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{totalIncome.toFixed(2)}</Text>
+          <View wrap={false} style={[styles.tableRowLast, styles.tableHeader]}>
+            <Text style={[styles.tableCell, styles.bold, { width: '70%', textAlign: 'right' }]}>JUMLAH KESELURUHAN</Text>
+            <Text style={[styles.tableCellLast, styles.bold, { width: '30%', textAlign: 'right' }]}>{totalIncome.toFixed(2)}</Text>
           </View>
         </View>
 
         <Text style={[styles.bold, { marginTop: 15 }]}>2. Anggaran Perbelanjaan</Text>
         <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { width: '8%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>BIL.</Text>
-            <Text style={[styles.tableCell, { width: '27%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>PERKARA</Text>
-            <Text style={[styles.tableCell, { width: '30%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>PENGIRAAN</Text>
-            <Text style={[styles.tableCell, { width: '15%', textAlign: 'center', fontFamily: 'Helvetica-Bold' }]}>JUMLAH (RM)</Text>
-            <Text style={[styles.tableCellLast, { width: '20%', fontFamily: 'Helvetica-Bold', textAlign: 'center' }]}>SUMBER</Text>
+          <View wrap={false} style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.tableCell, styles.bold, { width: '8%', textAlign: 'center' }]}>BIL.</Text>
+            <Text style={[styles.tableCell, styles.bold, { width: '27%', textAlign: 'center' }]}>PERKARA</Text>
+            <Text style={[styles.tableCell, styles.bold, { width: '30%', textAlign: 'center' }]}>PENGIRAAN</Text>
+            <Text style={[styles.tableCell, styles.bold, { width: '15%', textAlign: 'center' }]}>JUMLAH (RM)</Text>
+            <Text style={[styles.tableCellLast, styles.bold, { width: '20%', textAlign: 'center' }]}>SUMBER</Text>
           </View>
           {data.financials.expenses.map((exp, idx) => (
-            <View key={idx} style={idx === data.financials.expenses.length - 1 ? styles.tableRowLast : styles.tableRow}>
+            <View key={idx} wrap={false} style={idx === data.financials.expenses.length - 1 ? styles.tableRowLast : styles.tableRow}>
               <Text style={[styles.tableCell, { width: '8%', textAlign: 'center' }]}>{idx + 1}</Text>
               <Text style={[styles.tableCell, { width: '27%' }]}>{exp.item} ({exp.category})</Text>
               <Text style={[styles.tableCell, { width: '30%' }]}>{exp.calculation}</Text>
@@ -645,9 +665,9 @@ const PaperWorkDocument = ({ data }) => {
               <Text style={[styles.tableCellLast, { width: '20%' }]}>{exp.fundSource || 'Peruntukan Mengurus'}</Text>
             </View>
           ))}
-          <View style={[styles.tableRowLast, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { width: '65%', textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>JUMLAH KESELURUHAN</Text>
-            <Text style={[styles.tableCell, { width: '15%', textAlign: 'right', fontFamily: 'Helvetica-Bold' }]}>{totalExpenses.toFixed(2)}</Text>
+          <View wrap={false} style={[styles.tableRowLast, styles.tableHeader]}>
+            <Text style={[styles.tableCell, styles.bold, { width: '65%', textAlign: 'right' }]}>JUMLAH KESELURUHAN</Text>
+            <Text style={[styles.tableCellLast, styles.bold, { width: '15%', textAlign: 'right' }]}>{totalExpenses.toFixed(2)}</Text>
             <Text style={[styles.tableCellLast, { width: '20%', backgroundColor: '#F2F2F2' }]}></Text>
           </View>
         </View>

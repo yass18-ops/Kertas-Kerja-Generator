@@ -2,13 +2,22 @@ import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import PaperWorkDocument from './components/PaperWorkDocument';
+import SuggestiveInput from './components/SuggestiveInput';
+import {
+  USIM_VENUES,
+  USIM_CLUBS,
+  USIM_DEPARTMENTS,
+  USIM_ROLES,
+  USIM_PAX_SUGGESTIONS
+} from './data/usimData';
+import { USIM_PRESETS } from './data/usimPresets';
 import { sanitizeName } from './utils/sanitize';
-import { Plus, Trash2, FileDown } from 'lucide-react';
+import { Plus, Trash2, FileDown, Sparkles, RotateCcw, CheckCircle2, Wand2 } from 'lucide-react';
 
 const defaultValues = {
   eventMeta: { programName: '', startDate: '', endDate: '', venue: '', organizer: '', collaborator: '', pax: '' },
   proposalDetails: { purpose: '', synopsis: '', background: [''] },
-  objectives: [{ giinaElement: '', description: '' }],
+  objectives: [{ description: '' }],
   committee: {
     patron: { name: '', role: 'Naib Canselor' },
     advisor: { name: '', role: 'Dekan', pejabat: '' },
@@ -49,12 +58,54 @@ const validateExpenseCap = (expense) => {
 };
 
 function App() {
-  const { register, control, handleSubmit, watch, setValue, formState: { errors, isValid } } = useForm({
+  const { register, control, handleSubmit, watch, setValue, reset, formState: { errors, isValid } } = useForm({
     defaultValues,
     mode: 'onChange'
   });
 
   const [formData, setFormData] = useState(null);
+  const [selectedPresetId, setSelectedPresetId] = useState(USIM_PRESETS[0].id);
+  const [autoFillNotice, setAutoFillNotice] = useState(null);
+
+  const getSectionTitle = (key) => {
+    const map = {
+      eventMeta: '1. Maklumat Program',
+      proposalDetails: '2. Butiran Cadangan',
+      objectives: '3. Objektif',
+      committee: '4. Jawatankuasa Pelaksana',
+      itinerary: '5. Tentatif Program',
+      financials: '6. Implikasi Kewangan',
+      signatures: '7. Tandatangan'
+    };
+    return map[key] || key;
+  };
+
+  const handleApplyPreset = (presetId) => {
+    const preset = USIM_PRESETS.find(p => p.id === presetId) || USIM_PRESETS[0];
+    const clonedData = JSON.parse(JSON.stringify(preset.data));
+    reset(clonedData);
+    setFormData(clonedData);
+    setAutoFillNotice(`Semua bahagian borang berjaya diisi secara automatik dengan contoh: "${preset.title}"!`);
+    setTimeout(() => setAutoFillNotice(null), 6000);
+  };
+
+  const handleSectionAutoFill = (sectionKey) => {
+    const currentPreset = USIM_PRESETS.find(p => p.id === selectedPresetId) || USIM_PRESETS[0];
+    const sectionData = JSON.parse(JSON.stringify(currentPreset.data[sectionKey]));
+    setValue(sectionKey, sectionData, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    setAutoFillNotice(`Bahagian "${getSectionTitle(sectionKey)}" berjaya diisi dengan contoh (${currentPreset.title}).`);
+    setTimeout(() => setAutoFillNotice(null), 4000);
+  };
+
+  const handleClearForm = () => {
+    if (window.confirm('Adakah anda pasti ingin mengosongkan semua ruangan borang?')) {
+      const emptyValues = JSON.parse(JSON.stringify(defaultValues));
+      reset(emptyValues);
+      setFormData(null);
+      setAutoFillNotice('Semua ruangan borang telah dikosongkan.');
+      setTimeout(() => setAutoFillNotice(null), 3000);
+    }
+  };
 
   const incomeList = watch("financials.income") || [];
   const incomeSources = incomeList.map(inc => inc.source).filter(Boolean);
@@ -88,11 +139,113 @@ function App() {
           <p className="mt-2 text-sm text-gray-600">Sistem Penjanaan Automatik Kertas Kerja Universiti</p>
         </div>
 
+        {/* Auto Fill Control Banner */}
+        <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 rounded-xl shadow-lg p-5 mb-8 text-white">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-yellow-300 h-5 w-5 animate-pulse" />
+                <h2 className="text-lg font-bold">Ciri Isi Automatik (Auto Fill)</h2>
+                <span className="bg-yellow-400/20 text-yellow-200 text-xs px-2.5 py-0.5 rounded-full font-medium border border-yellow-300/30">
+                  Templat Contoh USIM
+                </span>
+              </div>
+              <p className="text-xs text-purple-100 mt-1">
+                Isi keseluruhan borang dengan satu klik menggunakan templat lengkap, atau gunakan butang "Isi Contoh" pada mana-mana bahagian.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+              <div className="relative flex-1 sm:flex-initial min-w-[220px]">
+                <select
+                  value={selectedPresetId}
+                  onChange={(e) => setSelectedPresetId(e.target.value)}
+                  className="bg-white/10 hover:bg-white/20 text-white text-xs rounded-lg px-3 py-2 border border-white/25 focus:outline-none focus:ring-2 focus:ring-yellow-300 cursor-pointer w-full"
+                >
+                  {USIM_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id} className="text-gray-900 bg-white">
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(selectedPresetId)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-yellow-400 hover:bg-yellow-300 text-purple-950 font-bold text-xs rounded-lg shadow transition transform active:scale-95"
+              >
+                <Wand2 size={14} /> Isi Penuh Borang
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearForm}
+                title="Kosongkan semula semua ruangan borang"
+                className="inline-flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-red-500/80 text-white text-xs font-medium rounded-lg border border-white/20 transition"
+              >
+                <RotateCcw size={13} /> Kosongkan
+              </button>
+            </div>
+          </div>
+
+          {/* Quick preset chips */}
+          <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-purple-200 font-medium text-[11px]">Pilihan Pantas:</span>
+            {USIM_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  setSelectedPresetId(p.id);
+                  handleApplyPreset(p.id);
+                }}
+                className={`px-2.5 py-1 rounded-md transition text-xs flex items-center gap-1 border ${
+                  selectedPresetId === p.id
+                    ? 'bg-white text-purple-900 font-semibold border-white shadow-sm'
+                    : 'bg-white/10 hover:bg-white/20 text-purple-100 border-white/15'
+                }`}
+              >
+                <span className="text-yellow-300">⚡</span>
+                <span className="font-semibold">{p.category}:</span>
+                <span className="truncate max-w-[170px]">{p.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Auto Fill Toast/Alert Notice */}
+        {autoFillNotice && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-emerald-800 text-sm animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="text-emerald-600 h-5 w-5 flex-shrink-0" />
+              <span>{autoFillNotice}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAutoFillNotice(null)}
+              className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold ml-3"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           
           {/* 1. Event Meta */}
           <div className={cardClass}>
-            <h2 className={titleClass}>1. Maklumat Program</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">1. Maklumat Program</h2>
+              <button
+                type="button"
+                onClick={() => handleSectionAutoFill('eventMeta')}
+                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition font-medium"
+                title="Isi contoh data untuk bahagian ini sahaja"
+              >
+                <Sparkles size={13} className="text-purple-600" /> Isi Contoh Bahagian
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className={labelClass}>Nama Program</label>
@@ -108,26 +261,68 @@ function App() {
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass}>Tempat</label>
-                <input type="text" {...register("eventMeta.venue", { required: true })} className={inputClass} />
+                <SuggestiveInput
+                  name="eventMeta.venue"
+                  control={control}
+                  options={USIM_VENUES}
+                  placeholder="cth: Dewan Tuanku Canselor (DTC)"
+                  rules={{ required: true }}
+                  className={inputClass}
+                  categoryName="Tempat USIM"
+                />
               </div>
               <div>
                 <label className={labelClass}>Anjuran</label>
-                <input type="text" {...register("eventMeta.organizer", { required: true })} className={inputClass} />
+                <SuggestiveInput
+                  name="eventMeta.organizer"
+                  control={control}
+                  options={USIM_CLUBS}
+                  placeholder="cth: Majlis Perwakilan Pelajar (MPP USIM)"
+                  rules={{ required: true }}
+                  className={inputClass}
+                  categoryName="Kelab / Persatuan USIM"
+                />
               </div>
               <div>
                 <label className={labelClass}>Kerjasama (Pilihan)</label>
-                <input type="text" {...register("eventMeta.collaborator")} className={inputClass} />
+                <SuggestiveInput
+                  name="eventMeta.collaborator"
+                  control={control}
+                  options={USIM_CLUBS}
+                  placeholder="cth: Kelab Debat USIM (Pilihan)"
+                  rules={{ required: false }}
+                  className={inputClass}
+                  categoryName="Rakan Kerjasama USIM"
+                />
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass}>Bilangan & Kumpulan Peserta (Contoh: 26 orang ahli Majlis Perwakilan Pelajar)</label>
-                <input type="text" {...register("eventMeta.pax", { required: true })} className={inputClass} placeholder="Contoh: 26 orang ahli Majlis Perwakilan Pelajar" />
+                <SuggestiveInput
+                  name="eventMeta.pax"
+                  control={control}
+                  options={USIM_PAX_SUGGESTIONS}
+                  placeholder="Contoh: 26 orang ahli Majlis Perwakilan Pelajar"
+                  rules={{ required: true }}
+                  className={inputClass}
+                  categoryName="Kumpulan & Bilangan Peserta"
+                />
               </div>
             </div>
           </div>
 
           {/* 2. Proposal Details */}
           <div className={cardClass}>
-            <h2 className={titleClass}>2. Butiran Cadangan</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">2. Butiran Cadangan</h2>
+              <button
+                type="button"
+                onClick={() => handleSectionAutoFill('proposalDetails')}
+                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition font-medium"
+                title="Isi contoh data untuk bahagian ini sahaja"
+              >
+                <Sparkles size={13} className="text-purple-600" /> Isi Contoh Bahagian
+              </button>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className={labelClass}>Tujuan</label>
@@ -157,32 +352,51 @@ function App() {
 
           {/* 3. Objectives */}
           <div className={cardClass}>
-            <h2 className={titleClass}>3. Objektif</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">3. Objektif</h2>
+              <button
+                type="button"
+                onClick={() => handleSectionAutoFill('objectives')}
+                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition font-medium"
+                title="Isi contoh data untuk bahagian ini sahaja"
+              >
+                <Sparkles size={13} className="text-purple-600" /> Isi Contoh Bahagian
+              </button>
+            </div>
             {objFields.map((field, index) => (
-              <div key={field.id} className="flex gap-4 items-start mb-4 bg-gray-50 p-4 rounded-md">
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <label className={labelClass}>Penerangan Objektif</label>
-                    <input type="text" {...register(`objectives.${index}.description`, { required: true })} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Elemen GIINA</label>
-                    <input type="text" {...register(`objectives.${index}.giinaElement`, { required: true })} className={inputClass} placeholder="Contoh: Kepimpinan" />
-                  </div>
+              <div key={field.id} className="flex gap-4 items-start mb-4 bg-gray-50 p-4 rounded-md border border-gray-100">
+                <div className="flex-1">
+                  <label className={labelClass}>Penerangan Objektif {index + 1}</label>
+                  <textarea
+                    rows={2}
+                    {...register(`objectives.${index}.description`, { required: true })}
+                    className={inputClass}
+                    placeholder="Contoh: Memberi pendedahan kepimpinan dan kemahiran pengurusan organisasi kepada para peserta."
+                  />
                 </div>
-                <button type="button" onClick={() => removeObj(index)} className="mt-6 p-2 text-red-600 hover:bg-red-100 rounded-md">
+                <button type="button" onClick={() => removeObj(index)} className="mt-6 p-2 text-red-600 hover:bg-red-100 rounded-md" title="Padam Objektif">
                   <Trash2 size={20} />
                 </button>
               </div>
             ))}
-            <button type="button" onClick={() => appendObj({ giinaElement: '', description: '' })} className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-purple-600 hover:bg-purple-700">
+            <button type="button" onClick={() => appendObj({ description: '' })} className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-purple-600 hover:bg-purple-700">
               <Plus size={14} className="mr-1" /> Tambah Objektif
             </button>
           </div>
 
           {/* 4. Committee */}
           <div className={cardClass}>
-            <h2 className={titleClass}>4. Jawatankuasa Pelaksana</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">4. Jawatankuasa Pelaksana</h2>
+              <button
+                type="button"
+                onClick={() => handleSectionAutoFill('committee')}
+                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition font-medium"
+                title="Isi contoh data untuk bahagian ini sahaja"
+              >
+                <Sparkles size={13} className="text-purple-600" /> Isi Contoh Bahagian
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {['patron', 'advisor', 'coordinator', 'director', 'secretary'].map((role) => (
                 <div key={role} className="bg-gray-50 p-4 rounded-md border border-gray-100 shadow-sm">
@@ -203,12 +417,28 @@ function App() {
                       <>
                         <div>
                           <label className="text-xs text-gray-500">Jawatan/Peranan</label>
-                          <input type="text" {...register(`committee.${role}.role`, { required: true })} className={inputClass} />
+                          <SuggestiveInput
+                            name={`committee.${role}.role`}
+                            control={control}
+                            options={USIM_ROLES[role] || []}
+                            placeholder={`cth: ${role === 'patron' ? 'Naib Canselor' : role === 'advisor' ? 'Dekan' : 'Penasihat Kelab'}`}
+                            rules={{ required: true }}
+                            className={inputClass}
+                            categoryName="Jawatan"
+                          />
                         </div>
                         {(role === 'advisor' || role === 'coordinator') && (
                           <div>
                             <label className="text-xs text-gray-500">Pejabat/Jabatan</label>
-                            <input type="text" {...register(`committee.${role}.pejabat`, { required: true })} className={inputClass} placeholder="cth: Pusat Hal Ehwal Pelajar" />
+                            <SuggestiveInput
+                              name={`committee.${role}.pejabat`}
+                              control={control}
+                              options={USIM_DEPARTMENTS}
+                              placeholder="cth: Pusat Pembangunan Hal Ehwal Pelajar (PHEP)"
+                              rules={{ required: true }}
+                              className={inputClass}
+                              categoryName="Jabatan / Fakulti"
+                            />
                           </div>
                         )}
                       </>
@@ -225,7 +455,15 @@ function App() {
                   <div className="flex gap-2 items-end mb-3">
                     <div className="flex-1">
                       <label className={labelClass}>Nama Portfolio (Contoh: AJK Publisiti)</label>
-                      <input type="text" {...register(`committee.subCommittees.${subIndex}.roleName`, { required: true })} className={inputClass} />
+                      <SuggestiveInput
+                        name={`committee.subCommittees.${subIndex}.roleName`}
+                        control={control}
+                        options={USIM_ROLES.subCommittees}
+                        placeholder="cth: AJK Publisiti & Media"
+                        rules={{ required: true }}
+                        className={inputClass}
+                        categoryName="Portfolio AJK"
+                      />
                     </div>
                     <button type="button" onClick={() => removeSubComm(subIndex)} className="mb-1 p-2 text-red-600 hover:bg-red-100 rounded-md">
                       <Trash2 size={18} />
@@ -251,7 +489,17 @@ function App() {
 
           {/* 5. Itinerary */}
           <div className={cardClass}>
-            <h2 className={titleClass}>5. Tentatif Program</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">5. Tentatif Program</h2>
+              <button
+                type="button"
+                onClick={() => handleSectionAutoFill('itinerary')}
+                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition font-medium"
+                title="Isi contoh data untuk bahagian ini sahaja"
+              >
+                <Sparkles size={13} className="text-purple-600" /> Isi Contoh Bahagian
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-3 mb-6">
               <div>
                 <label className={labelClass}>Tarikh</label>
@@ -263,7 +511,15 @@ function App() {
               </div>
               <div>
                 <label className={labelClass}>Tempat</label>
-                <input type="text" {...register("itinerary.venue", { required: true })} className={inputClass} />
+                <SuggestiveInput
+                  name="itinerary.venue"
+                  control={control}
+                  options={USIM_VENUES}
+                  placeholder="cth: Dewan Tuanku Canselor (DTC)"
+                  rules={{ required: true }}
+                  className={inputClass}
+                  categoryName="Tempat / Lokasi"
+                />
               </div>
             </div>
 
@@ -289,7 +545,17 @@ function App() {
 
           {/* 6. Financials */}
           <div className={cardClass}>
-            <h2 className={titleClass}>6. Implikasi Kewangan</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">6. Implikasi Kewangan</h2>
+              <button
+                type="button"
+                onClick={() => handleSectionAutoFill('financials')}
+                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition font-medium"
+                title="Isi contoh data untuk bahagian ini sahaja"
+              >
+                <Sparkles size={13} className="text-purple-600" /> Isi Contoh Bahagian
+              </button>
+            </div>
             
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">Pendapatan</h3>
@@ -378,7 +644,17 @@ function App() {
 
           {/* 7. Signatures */}
           <div className={cardClass}>
-            <h2 className={titleClass}>7. Tandatangan</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">7. Tandatangan</h2>
+              <button
+                type="button"
+                onClick={() => handleSectionAutoFill('signatures')}
+                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition font-medium"
+                title="Isi contoh data untuk bahagian ini sahaja"
+              >
+                <Sparkles size={13} className="text-purple-600" /> Isi Contoh Bahagian
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-gray-50 p-4 rounded-md">
                 <h3 className="font-semibold text-gray-700 mb-2">Disediakan Oleh</h3>
@@ -391,7 +667,15 @@ function App() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500">Jawatan</label>
-                    <input type="text" {...register("signatures.preparedBy.role", { required: true })} className={inputClass} />
+                    <SuggestiveInput
+                      name="signatures.preparedBy.role"
+                      control={control}
+                      options={USIM_ROLES.preparedBy}
+                      placeholder="cth: Pengarah Program"
+                      rules={{ required: true }}
+                      className={inputClass}
+                      categoryName="Jawatan"
+                    />
                   </div>
                 </div>
               </div>
@@ -406,7 +690,15 @@ function App() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500">Jawatan</label>
-                    <input type="text" {...register("signatures.reviewedBy.role", { required: true })} className={inputClass} />
+                    <SuggestiveInput
+                      name="signatures.reviewedBy.role"
+                      control={control}
+                      options={USIM_ROLES.reviewedBy}
+                      placeholder="cth: Penasihat Program"
+                      rules={{ required: true }}
+                      className={inputClass}
+                      categoryName="Jawatan"
+                    />
                   </div>
                 </div>
               </div>
